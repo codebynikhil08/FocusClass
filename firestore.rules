@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId);
+    }
+
+    // Classroom Sessions
+    match /sessions/{sessionId} {
+      // Anyone authenticated can read sessions (e.g., student checking valid session code)
+      allow read: if isAuthenticated();
+      // Only the teacher creating/owning the session can create or update it
+      allow create: if isAuthenticated() && request.resource.data.teacherId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && resource.data.teacherId == request.auth.uid;
+
+      // Participants subcollection
+      match /participants/{studentId} {
+        allow read: if isAuthenticated();
+        // Students can register their own participation or update their focus timestamps
+        allow create, update: if isAuthenticated() && (request.auth.uid == studentId || request.auth.uid == get(/databases/$(database)/documents/sessions/$(sessionId)).data.teacherId);
+        allow delete: if isAuthenticated() && request.auth.uid == get(/databases/$(database)/documents/sessions/$(sessionId)).data.teacherId;
+      }
+
+      // Events subcollection
+      match /events/{eventId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if false; // Audit trail: events are append-only
+      }
+    }
+
+    // Session reports
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if false;
+    }
+  }
+}
