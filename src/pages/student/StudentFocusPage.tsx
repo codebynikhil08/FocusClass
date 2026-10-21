@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from '../../contexts/SessionContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { FocusTimer } from '../../components/session/FocusTimer';
-import { EventSimulator } from '../../components/session/EventSimulator';
 import { calculateStudentEngagementScore } from '../../services/analyticsService';
 import { 
   Compass, 
@@ -386,9 +385,6 @@ export const StudentFocusPage: React.FC<StudentFocusPageProps> = ({ onNavigate }
         onEndFocus={handleEnd}
         disabled={isEnding}
       />
-
-      {/* Demo Mode Event Simulator */}
-      <EventSimulator />
     </div>
   );
 };

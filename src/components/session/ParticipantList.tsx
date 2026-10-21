@@ -102,7 +102,7 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
                     {(participant.infractionCount || 0) > 0 && (
                       <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold animate-pulse">
                         <AlertTriangle className="w-3 h-3 text-rose-600" />
-                        {participant.infractionCount} {participant.infractionCount === 1 ? 'flag' : 'flags'}
+                        {participant.infractionCount} {participant.infractionCount === 1 ? 'alert' : 'alerts'}
                       </span>
                     )}
                   </div>

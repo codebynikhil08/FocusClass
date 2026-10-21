@@ -168,7 +168,7 @@ export const StudentActivityDrawer: React.FC<StudentActivityDrawerProps> = ({
             </span>
             <span className="text-base font-black font-mono mt-0.5 flex items-center gap-1">
               <ShieldAlert className="w-4 h-4 text-rose-600" />
-              {student.infractionCount || abnormalEvents.length} flags
+              {student.infractionCount || abnormalEvents.length} alerts
             </span>
           </div>
         </div>

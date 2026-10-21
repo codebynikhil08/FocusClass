@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SessionProvider, useSession } from './contexts/SessionContext';
 import { Navbar } from './components/common/Navbar';
-import { DemoBanner } from './components/common/DemoBanner';
 import { Sidebar } from './components/common/Sidebar';
+import { TeacherMobileNav } from './components/common/TeacherMobileNav';
 import { StudentNav } from './components/common/StudentNav';
 
 // Pages
@@ -32,11 +32,7 @@ const AppContent: React.FC = () => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.has('join')) {
-        if (user && user.role === 'student') {
-          setCurrentRoute('student-join');
-        } else if (!user) {
-          setCurrentRoute('login');
-        }
+        setCurrentRoute('student-join');
         return;
       }
     }
@@ -47,7 +43,7 @@ const AppContent: React.FC = () => {
           setCurrentRoute(user.role === 'teacher' ? 'teacher-dashboard' : 'student-dashboard');
         }
       } else {
-        if (currentRoute.startsWith('teacher-') || currentRoute.startsWith('student-')) {
+        if (currentRoute.startsWith('teacher-') || (currentRoute.startsWith('student-') && currentRoute !== 'student-join')) {
           setCurrentRoute('landing');
         }
       }
@@ -110,15 +106,12 @@ const AppContent: React.FC = () => {
     }
   };
 
-  const isPublicPage = currentRoute === 'landing' || currentRoute === 'login' || currentRoute === 'register';
+  const isPublicPage = currentRoute === 'landing' || currentRoute === 'login' || currentRoute === 'register' || currentRoute === 'student-join';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-teal-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 flex flex-col selection:bg-teal-500 selection:text-white pb-16 md:pb-0">
       {/* Top Navigation */}
       <Navbar onNavigate={setCurrentRoute} currentRoute={currentRoute} />
-
-      {/* Global Presentation Demo Bar */}
-      <DemoBanner />
 
       {/* Main Container */}
       {isPublicPage ? (
@@ -126,16 +119,20 @@ const AppContent: React.FC = () => {
           {renderCurrentPage()}
         </main>
       ) : user?.role === 'teacher' ? (
-        <div className="flex-1 flex max-w-7xl w-full mx-auto">
-          {/* Teacher Sidebar */}
-          <div className="hidden md:block">
-            <Sidebar currentRoute={currentRoute} onNavigate={setCurrentRoute} />
+        <>
+          <div className="flex-1 flex max-w-7xl w-full mx-auto">
+            {/* Desktop Teacher Sidebar */}
+            <div className="hidden md:block">
+              <Sidebar currentRoute={currentRoute} onNavigate={setCurrentRoute} />
+            </div>
+            {/* Main Area */}
+            <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
+              {renderCurrentPage()}
+            </main>
           </div>
-          {/* Main Area */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 min-w-0">
-            {renderCurrentPage()}
-          </main>
-        </div>
+          {/* Mobile Teacher Bottom Navigation */}
+          <TeacherMobileNav currentRoute={currentRoute} onNavigate={setCurrentRoute} />
+        </>
       ) : (
         <div className="flex-1 flex flex-col">
           {/* Student Subnav */}

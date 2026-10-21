@@ -29,7 +29,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentRoute, onNavigate }) =>
       badgeColor: 'bg-emerald-500 text-white'
     },
     { id: 'teacher-analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'teacher-ai', label: 'AI Insights', icon: Sparkles, badge: 'Heuristic', badgeColor: 'bg-indigo-100 text-indigo-700' },
+    { id: 'teacher-ai', label: 'Observations', icon: Sparkles },
     { id: 'teacher-profile', label: 'Teacher Profile', icon: UserCheck },
   ];
 

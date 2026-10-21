@@ -16,23 +16,33 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [targetHost, setTargetHost] = useState<'tunnel' | 'lan' | 'current'>('tunnel');
+  const [lanIp, setLanIp] = useState<string>('');
+  const [selectedMode, setSelectedMode] = useState<'auto' | 'lan'>('auto');
 
-  const tunnelUrl = 'https://09fd1bd73611d3.lhr.life';
-  const lanUrl = 'http://10.132.227.40:5173';
+  React.useEffect(() => {
+    fetch('/api/info')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && data.ip) {
+          setLanIp(`http://${data.ip}:${data.port || 5173}`);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const getBaseUrl = () => {
-    if (targetHost === 'tunnel') return tunnelUrl;
-    if (targetHost === 'lan') return lanUrl;
+    if (selectedMode === 'lan' && lanIp) {
+      return lanIp;
+    }
     if (typeof window !== 'undefined') {
       const origin = window.location.origin;
-      // If viewed on localhost, fallback to LAN IP so phone doesn't fail
-      if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-        return lanUrl;
+      // If viewed on localhost and lanIp is available, suggest LAN IP for external phones
+      if ((origin.includes('localhost') || origin.includes('127.0.0.1')) && lanIp) {
+        return lanIp;
       }
       return origin;
     }
-    return lanUrl;
+    return lanIp || 'http://localhost:5173';
   };
 
   const joinUrl = `${getBaseUrl()}/?join=${sessionCode}`;
@@ -106,26 +116,28 @@ export const QRCodeDisplay: React.FC<QRCodeDisplayProps> = ({
       <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl mb-3 text-[11px] font-bold">
         <button
           type="button"
-          onClick={() => setTargetHost('tunnel')}
-          className={`px-2.5 py-1 rounded-lg transition-all ${
-            targetHost === 'tunnel'
-              ? 'bg-white text-teal-700 shadow-xs font-black'
+          onClick={() => setSelectedMode('auto')}
+          className={`px-3 py-1 rounded-lg transition-all ${
+            selectedMode === 'auto'
+              ? 'bg-white text-teal-700 shadow-sm font-black'
               : 'text-slate-500 hover:text-slate-800'
           }`}
         >
-          🌐 Public Mobile (Recommended)
+          🌐 Web / Current URL
         </button>
-        <button
-          type="button"
-          onClick={() => setTargetHost('lan')}
-          className={`px-2.5 py-1 rounded-lg transition-all ${
-            targetHost === 'lan'
-              ? 'bg-white text-teal-700 shadow-xs font-black'
-              : 'text-slate-500 hover:text-slate-800'
-          }`}
-        >
-          📶 Local Wi-Fi
-        </button>
+        {lanIp && (
+          <button
+            type="button"
+            onClick={() => setSelectedMode('lan')}
+            className={`px-3 py-1 rounded-lg transition-all ${
+              selectedMode === 'lan'
+                ? 'bg-white text-teal-700 shadow-sm font-black'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            📶 Local Wi-Fi IP
+          </button>
+        )}
       </div>
 
       {/* Info & Copy Link */}

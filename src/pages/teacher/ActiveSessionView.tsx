@@ -26,9 +26,8 @@ interface ActiveSessionViewProps {
 }
 
 export const ActiveSessionView: React.FC<ActiveSessionViewProps> = ({ onNavigate }) => {
-  const { activeSession, participants, events, endSession, seedDemoStudents } = useSession();
+  const { activeSession, participants, events, endSession } = useSession();
   const [confirmEnd, setConfirmEnd] = useState(false);
-  const [demoNotice, setDemoNotice] = useState<string | null>(null);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
   const selectedStudent = selectedStudentId 
@@ -36,8 +35,7 @@ export const ActiveSessionView: React.FC<ActiveSessionViewProps> = ({ onNavigate
     : null;
 
   const abnormalEvents = events.filter((e) =>
-    ['tab_switched_background', 'focus_lost_blur', 'unauthorized_login_attempt', 'abnormal_phone_activity'].includes(e.eventType) ||
-    e.eventType.startsWith('simulated_')
+    ['tab_switched_background', 'focus_lost_blur', 'unauthorized_login_attempt', 'abnormal_phone_activity'].includes(e.eventType)
   ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   if (!activeSession) {
@@ -50,7 +48,7 @@ export const ActiveSessionView: React.FC<ActiveSessionViewProps> = ({ onNavigate
         </p>
         <button
           onClick={() => onNavigate('teacher-create')}
-          className="px-5 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold shadow-sm hover:bg-teal-700 transition-all"
+          className="px-5 py-2.5 rounded-xl bg-teal-600 text-white text-xs font-bold shadow-sm hover:bg-teal-700 transition-all cursor-pointer"
         >
           Create Session Now
         </button>
@@ -62,12 +60,6 @@ export const ActiveSessionView: React.FC<ActiveSessionViewProps> = ({ onNavigate
     await endSession();
     setConfirmEnd(false);
     onNavigate('teacher-analytics');
-  };
-
-  const handleSeedDemoStudents = async () => {
-    await seedDemoStudents();
-    setDemoNotice('Injected 5 demo students into live session for presentation!');
-    setTimeout(() => setDemoNotice(null), 4000);
   };
 
   return (
@@ -148,13 +140,6 @@ export const ActiveSessionView: React.FC<ActiveSessionViewProps> = ({ onNavigate
             )}
           </div>
         </div>
-
-        {demoNotice && (
-          <div className="mt-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center gap-2 animate-fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span>{demoNotice}</span>
-          </div>
-        )}
       </div>
 
       {/* Main Classroom Grid: QR Display (Left) + Real-Time Participants (Right) */}
@@ -167,27 +152,35 @@ export const ActiveSessionView: React.FC<ActiveSessionViewProps> = ({ onNavigate
             className={activeSession.className}
           />
 
-          {/* Demo Simulation Helper Card */}
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 shadow-xs">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-amber-600" />
-                Demo Student Generator
+          {/* Real Classroom Connection Card */}
+          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <Smartphone className="w-4 h-4 text-teal-600" />
+                Live Student Devices
               </span>
-              <span className="text-[10px] bg-amber-200 font-bold text-amber-900 px-2 py-0.5 rounded">
-                Guide Demo
+              <span className="inline-flex items-center gap-1.5 text-[11px] bg-emerald-50 font-bold text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Real-Time Sync Active
               </span>
             </div>
-            <p className="text-xs text-amber-800/90 mb-3">
-              Presenting to your project guide? Click below to instantly simulate active students (Rahul, Priya, Aman) joining and maintaining focus:
+            
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                <div className="text-2xl font-black text-slate-900">{participants.length}</div>
+                <div className="text-[11px] font-semibold text-slate-500">Connected Students</div>
+              </div>
+              <div className="p-3 bg-teal-50/50 rounded-xl border border-teal-100 text-center">
+                <div className="text-2xl font-black text-teal-700">
+                  {participants.filter(p => p.status === 'active').length}
+                </div>
+                <div className="text-[11px] font-semibold text-teal-700">In Focus Mode</div>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              Students can join using any smartphone on the classroom Wi-Fi or internet. When students join and start focusing, their devices sync here immediately.
             </p>
-            <button
-              onClick={handleSeedDemoStudents}
-              className="w-full py-2.5 bg-white hover:bg-amber-100/50 text-slate-800 rounded-xl border border-amber-300 font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2"
-            >
-              <Users className="w-4 h-4 text-amber-700" />
-              Simulate 5 Students Joining Live
-            </button>
           </div>
         </div>
 

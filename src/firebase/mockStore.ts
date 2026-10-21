@@ -11,7 +11,7 @@ interface StoreSchema {
 const STORAGE_KEY = 'focusclass_local_store_v1';
 const BROADCAST_NAME = 'focusclass_sync_channel';
 
-// Default initial seed data for immediate demonstration
+// Clean production store schema (no fake demo sessions or simulated events)
 const initialData: StoreSchema = {
   users: {
     'teacher-1': {
@@ -20,85 +20,11 @@ const initialData: StoreSchema = {
       email: 'teacher@focusclass.edu',
       role: 'teacher',
       createdAt: new Date().toISOString(),
-    },
-    'student-1': {
-      uid: 'student-1',
-      name: 'Rahul Verma',
-      email: 'rahul@student.edu',
-      role: 'student',
-      createdAt: new Date().toISOString(),
-    },
-    'student-2': {
-      uid: 'student-2',
-      name: 'Priya Patel',
-      email: 'priya@student.edu',
-      role: 'student',
-      createdAt: new Date().toISOString(),
-    },
-    'student-3': {
-      uid: 'student-3',
-      name: 'Aman Khan',
-      email: 'aman@student.edu',
-      role: 'student',
-      createdAt: new Date().toISOString(),
     }
   },
-  sessions: {
-    'fc-sample-1': {
-      sessionId: 'fc-sample-1',
-      sessionCode: 'FC-4821',
-      teacherId: 'teacher-1',
-      teacherName: 'Prof. Anita Sharma',
-      subject: 'Data Structures & Algorithms',
-      className: 'SE Computer A',
-      duration: 50,
-      status: 'active',
-      startTime: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    }
-  },
-  participants: {
-    'fc-sample-1_student-1': {
-      studentId: 'student-1',
-      studentName: 'Rahul Verma',
-      sessionId: 'fc-sample-1',
-      joinedAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-      focusStartTime: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-      status: 'active',
-      focusDurationSeconds: 720,
-      engagementScore: 88,
-    }
-  },
-  events: [
-    {
-      eventId: 'evt-1',
-      sessionId: 'fc-sample-1',
-      studentId: 'student-1',
-      studentName: 'Rahul Verma',
-      eventType: 'session_joined',
-      timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-      isSimulated: false,
-    },
-    {
-      eventId: 'evt-2',
-      sessionId: 'fc-sample-1',
-      studentId: 'student-1',
-      studentName: 'Rahul Verma',
-      eventType: 'focus_started',
-      timestamp: new Date(Date.now() - 1000 * 60 * 12).toISOString(),
-      isSimulated: false,
-    },
-    {
-      eventId: 'evt-3',
-      sessionId: 'fc-sample-1',
-      studentId: 'student-1',
-      studentName: 'Rahul Verma',
-      eventType: 'simulated_phone_unlock',
-      timestamp: new Date(Date.now() - 1000 * 60 * 6).toISOString(),
-      isSimulated: true,
-      metadata: { trigger: 'Quick notification check' }
-    }
-  ],
+  sessions: {},
+  participants: {},
+  events: [],
   reports: {}
 };
 
@@ -106,6 +32,7 @@ class LocalReactiveStore {
   private data: StoreSchema;
   private channel: BroadcastChannel | null = null;
   private listeners: Set<() => void> = new Set();
+  private eventSource: EventSource | null = null;
 
   constructor() {
     this.data = this.loadFromStorage();
@@ -125,15 +52,39 @@ class LocalReactiveStore {
         }
       });
 
-      // Synchronize across devices (e.g. Android phone + Laptop) on the local Wi-Fi
+      // 1. Instant Real-Time Cross-Device SSE Stream
+      try {
+        if ('EventSource' in window) {
+          this.eventSource = new EventSource('/api/stream');
+          this.eventSource.onmessage = (event) => {
+            try {
+              const parsed = JSON.parse(event.data);
+              if (parsed && parsed.data && JSON.stringify(parsed.data) !== JSON.stringify(this.data)) {
+                this.data = parsed.data;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
+                this.notifyListeners();
+              }
+            } catch {
+              // ignore parse errors
+            }
+          };
+          this.eventSource.onerror = () => {
+            // EventSource will auto-retry
+          };
+        }
+      } catch {
+        // SSE not supported
+      }
+
+      // 2. Initial fetch from server
       fetch('/api/store')
         .then((r) => r.json())
         .then((json) => {
-          if (json.data) {
+          if (json.data && Object.keys(json.data.sessions || {}).length > 0) {
             this.data = json.data;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
             this.notifyListeners();
-          } else {
+          } else if (Object.keys(this.data.sessions || {}).length > 0) {
             fetch('/api/store', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -143,7 +94,7 @@ class LocalReactiveStore {
         })
         .catch(() => {});
 
-      // Periodic fast poll so mobile actions reflect immediately on laptop
+      // 3. Fallback periodic sync (1.5s) for networks where SSE might be blocked
       setInterval(async () => {
         try {
           const r = await fetch('/api/store');
@@ -153,8 +104,8 @@ class LocalReactiveStore {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
             this.notifyListeners();
           }
-        } catch (e) {}
-      }, 1200);
+        } catch {}
+      }, 1500);
     }
   }
 

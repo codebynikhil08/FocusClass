@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../../contexts/SessionContext';
-import { KeyRound, ArrowRight, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { KeyRound, ArrowRight, AlertCircle, User, Smartphone, ShieldCheck } from 'lucide-react';
 
 interface JoinSessionPageProps {
   onNavigate: (route: string) => void;
@@ -8,7 +9,10 @@ interface JoinSessionPageProps {
 
 export const JoinSessionPage: React.FC<JoinSessionPageProps> = ({ onNavigate }) => {
   const { joinSessionWithCode } = useSession();
+  const { user, register } = useAuth();
   const [sessionCode, setSessionCode] = useState('');
+  const [studentName, setStudentName] = useState(user?.name || '');
+  const [rollNumber, setRollNumber] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
 
@@ -30,10 +34,23 @@ export const JoinSessionPage: React.FC<JoinSessionPageProps> = ({ onNavigate }) 
       return;
     }
 
+    if (!user && !studentName.trim()) {
+      setError('Please enter your full name to join the classroom.');
+      return;
+    }
+
     setIsJoining(true);
     setError(null);
 
     try {
+      if (!user) {
+        const cleanName = studentName.trim();
+        const cleanRoll = rollNumber.trim();
+        const displayName = cleanRoll ? `${cleanName} (${cleanRoll})` : cleanName;
+        const autoEmail = `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '') || 'student'}_${Date.now()}@student.edu`;
+        await register(displayName, autoEmail, 'student');
+      }
+
       await joinSessionWithCode(sessionCode);
       onNavigate('student-focus');
     } catch (err: any) {
@@ -44,9 +61,9 @@ export const JoinSessionPage: React.FC<JoinSessionPageProps> = ({ onNavigate }) 
   };
 
   return (
-    <div className="max-w-md mx-auto my-6 sm:my-12">
-      <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-sm text-center">
-        <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center mb-4">
+    <div className="max-w-md mx-auto my-6 sm:my-12 px-4">
+      <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-sm text-center">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-teal-50 border border-teal-200 text-teal-600 flex items-center justify-center mb-4 shadow-xs">
           <KeyRound className="w-7 h-7" />
         </div>
 
@@ -54,7 +71,7 @@ export const JoinSessionPage: React.FC<JoinSessionPageProps> = ({ onNavigate }) 
           Join Classroom Session
         </h1>
         <p className="text-xs text-slate-500 mt-1 mb-6">
-          Enter the 6-character session code shown on the classroom projector
+          Connect your device to the active classroom focus session
         </p>
 
         {error && (
@@ -64,10 +81,43 @@ export const JoinSessionPage: React.FC<JoinSessionPageProps> = ({ onNavigate }) 
           </div>
         )}
 
-        <form onSubmit={handleJoin} className="space-y-4">
+        <form onSubmit={handleJoin} className="space-y-4 text-left">
+          {!user && (
+            <>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-teal-600" />
+                  Your Name:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={studentName}
+                  onChange={(e) => setStudentName(e.target.value)}
+                  placeholder="e.g. Rahul Sharma"
+                  className="w-full text-sm font-semibold px-4 py-3 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all bg-slate-50 focus:bg-white text-slate-900"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-teal-600" />
+                  Roll No / Student ID (Optional):
+                </label>
+                <input
+                  type="text"
+                  value={rollNumber}
+                  onChange={(e) => setRollNumber(e.target.value)}
+                  placeholder="e.g. 42 or SE-08"
+                  className="w-full text-sm font-semibold px-4 py-3 rounded-xl border border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all bg-slate-50 focus:bg-white text-slate-900"
+                />
+              </div>
+            </>
+          )}
+
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-              Enter Session Code:
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+              Enter 6-Character Session Code:
             </label>
             <input
               type="text"
@@ -75,36 +125,24 @@ export const JoinSessionPage: React.FC<JoinSessionPageProps> = ({ onNavigate }) 
               maxLength={10}
               value={sessionCode}
               onChange={(e) => setSessionCode(e.target.value.toUpperCase())}
-              placeholder="FC-4821"
-              className="w-full text-center text-2xl font-mono font-black tracking-widest px-4 py-3.5 rounded-2xl border-2 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all uppercase"
+              placeholder="FC-8921"
+              className="w-full text-center text-2xl font-mono font-black tracking-widest px-4 py-3.5 rounded-2xl border-2 border-slate-200 focus:border-teal-500 focus:ring-4 focus:ring-teal-500/10 transition-all uppercase bg-slate-50 focus:bg-white text-slate-900"
             />
           </div>
 
           <button
             type="submit"
             disabled={isJoining}
-            className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-3.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm shadow-md shadow-teal-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-4 cursor-pointer"
           >
-            {isJoining ? 'Verifying & Joining...' : 'JOIN SESSION'}
+            {isJoining ? 'Connecting to Session...' : 'ENTER CLASSROOM'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        {/* Demo fast-fill */}
-        <div className="mt-8 pt-6 border-t border-slate-100 text-left">
-          <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Sample Active Codes for Testing</span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setSessionCode('FC-4821')}
-              className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-700 font-mono text-xs font-bold transition-colors border border-slate-200"
-            >
-              FC-4821 (Sample Lecture)
-            </button>
-          </div>
+        <div className="mt-6 pt-5 border-t border-slate-100 flex items-center justify-center gap-2 text-slate-400 text-[11px]">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>Real-time presence & privacy-conscious focus monitoring</span>
         </div>
       </div>
     </div>
